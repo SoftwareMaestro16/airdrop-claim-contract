@@ -3,6 +3,8 @@
 #include "imports/utils.fc";
 #include "imports/params.fc";
 
+
+global int storage::init?;
 global int storage::last_time_drop;
 global slice storage::main_drop_address;
 global slice storage::owner_address;
@@ -49,7 +51,14 @@ global slice storage::owner_address;
 
     storage::last_time_drop = ds~load_uint(32);
     storage::main_drop_address = ds~load_msg_addr();
-    storage::owner_address = ds~load_msg_addr();
+
+    if (ds.slice_bits() > 0) {
+        storage::init? = -1;; true
+        storage::owner_address = ds~load_msg_addr();
+    } else {
+        storage::init? = 0;; false
+        storage::owner_address = null();
+    }
 
     ds.end_parse();
 }
@@ -74,11 +83,20 @@ global slice storage::owner_address;
     if (flags & 1) {
         return ();
     }
-
-    slice sender = cs~load_msg_addr(); 
-    int op = in_msg_body~load_uint(32); 
+    slice sender_address = cs~load_msg_addr(); 
 
     load_data();
+
+    if (~ init?) { ;; один раз для инициализации адреса после деплоя 
+        throw_unless(405, equal_slices(storage::main_drop_address, sender_address));
+        storage::owner_address = in_msg_body~load_msg_addr();
+        save_data();
+        return ();
+    }
+
+
+    int op = in_msg_body~load_uint(32); 
+
 
     if (op == op::send_ton) {
 

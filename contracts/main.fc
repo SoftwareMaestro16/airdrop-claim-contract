@@ -49,7 +49,11 @@ slice calculate_user_drop_address(int wc, cell state_init) {
             .store_coins(amount)
             .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
             .store_ref(state_init)
-            .store_slice(owner);
+            .store_ref(
+                begin_cell()
+                    .store_slice(owner)
+                .end_cell()
+            );
     send_raw_message(msg.end_cell(), 1); 
 }
 
