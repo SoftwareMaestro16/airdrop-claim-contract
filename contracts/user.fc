@@ -46,13 +46,14 @@ global slice storage::owner_address;
     if (flags & 1) {
         return ();
     }
+
     slice sender_address = cs~load_msg_addr(); 
-
-    load_data();
+    int amount = msg_value - 2500000;
     
-    int amount = 16666677;
+    load_data();
 
-    if (~ storage::init?) { ;; один раз для инициализации адреса после деплоя 
+    if (~ storage::init?) { ;; one time for initialization address after deployment
+        
         throw_unless(405, equal_slices(storage::main_drop_address, sender_address));
         storage::owner_address = in_msg_body~load_msg_addr();
         throw_unless(501, my_balance >= amount);
@@ -61,14 +62,12 @@ global slice storage::owner_address;
 
         msg::send_ton(storage::owner_address, amount);
 
-        return ();
-        
+        return ();      
     }
 
     int op = in_msg_body~load_uint(32);
 
     if (op == 0x8015864d) {
-        
         throw_unless(501, my_balance >= amount);
         storage::last_time_drop = cur_lt();
         save_data();

@@ -5,6 +5,7 @@
 
 global slice storage::owner_address;
 global cell storage::user_drop_code;
+global int storage::to_claim;
 global int storage::is_locked?;
 
 () load_data() impure inline {
@@ -12,6 +13,7 @@ global int storage::is_locked?;
 
     storage::owner_address = ds~load_msg_addr();
     storage::user_drop_code = ds~load_ref();
+    storage::to_claim = ds~load_uint(64);
     storage::is_locked? = ds~load_uint(16);
 
     ds.end_parse();
@@ -22,6 +24,7 @@ global int storage::is_locked?;
         begin_cell()
             .store_slice(storage::owner_address)
             .store_ref(storage::user_drop_code)
+            .store_uint(storage::to_claim, 64)
             .store_uint(storage::is_locked?, 1)
         .end_cell()
     );
@@ -47,7 +50,7 @@ slice calculate_user_drop_address(int wc, cell state_init) {
     var deploy_msg = begin_cell()
         .store_uint(0x18, 6)                
         .store_slice(user_drop_address)     
-        .store_coins(amount)                
+        .store_coins(amount + 2500000)                
         .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
         .store_ref(state_init)              
         .store_ref(
@@ -91,11 +94,17 @@ slice calculate_user_drop_address(int wc, cell state_init) {
     if (op == op::get_ton) {       
         cell state_init = calculate_user_drop_state_init(0, storage::user_drop_code);
         slice user_drop_address = calculate_user_drop_address(workchain(), state_init);
-        
-        deploy_user_contract(0, storage::user_drop_code, 40000000, sender);
-        ;; request_send_ton(user_drop_address, recipient_address, 25000000);
-        
+        deploy_user_contract(0, storage::user_drop_code, storage::to_claim, sender);
+
         return();
+    }
+
+    if (op == op::to_claim_change) {
+        int new_claim = in_msg_body~load_uint(64);
+        storage::to_claim = new_claim;
+        save_data();
+
+        return ();
     }
 
     throw(0xfffff); 
@@ -111,6 +120,11 @@ slice calculate_user_drop_address(int wc, cell state_init) {
 (cell) get_user_drop_code() method_id {
     load_data();
     return storage::user_drop_code;
+}
+
+(int) get_to_claim() method_id {
+    load_data();
+    return storage::to_claim;
 }
 
 (int) get_is_locked() method_id {

@@ -10,6 +10,7 @@ export async function run(provider: NetworkProvider) {
     const main = provider.open(Main.createFromConfig({
         owner: provider.sender().address as Address,
         userDropCode: await compile("User"),
+        toClaim: BigInt(0.03 * 10**9),
         isLocked: 0
     }, await compile('Main')));
 

@@ -3,6 +3,7 @@ import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, 
 export type MainConfig = {
     owner: Address;
     userDropCode: Cell;
+    toClaim: bigint;
     isLocked: number;
 };
 
@@ -10,6 +11,7 @@ export function mainConfigToCell(config: MainConfig): Cell {
     return beginCell()
         .storeAddress(config.owner)
         .storeRef(config.userDropCode)
+        .storeUint(config.toClaim, 64)
         .storeUint(config.isLocked, 16)
     .endCell();
 }
@@ -41,6 +43,17 @@ export class Main implements Contract {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(0xfef91bc, 32)
+            .endCell(),
+        });
+    }
+
+    async sendToClaimChange(provider: ContractProvider, via: Sender, value: bigint, toChange: bigint) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(0xb41f4b2, 32)
+                .storeUint(toChange, 64)
             .endCell(),
         });
     }
