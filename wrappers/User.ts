@@ -32,7 +32,7 @@ export class User implements Contract {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
-                .storeUint(0x48c671b0, 32)
+                .storeUint(0x8015864d, 32)
             .endCell(),
         });
     }
@@ -41,7 +41,7 @@ export class User implements Contract {
         await provider.internal(via, {
             value, sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
-                .storeUint(0x48c671b0, 32)
+                .storeUint(0x8015864d, 32)
             .endCell()
         })
     }
