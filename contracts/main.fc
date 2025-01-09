@@ -40,64 +40,6 @@ slice calculate_user_drop_address(int wc, cell state_init) {
                      .begin_parse();
 }
 
-;; () deploy_user_contract(int last_time_drop, cell user_drop_code, int amount, slice owner) impure {
-;;     cell state_init = calculate_user_drop_state_init(last_time_drop, user_drop_code);
-;;     slice user_drop_address = calculate_user_drop_address(workchain(), state_init);
-;;     var msg = begin_cell()
-;;             .store_uint(0x18, 6)
-;;             .store_slice(user_drop_address)
-;;             .store_coins(amount)
-;;             .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
-;;             .store_ref(state_init)
-;;             .store_ref(
-;;                 begin_cell()
-;;                     .store_slice(owner)
-;;                 .end_cell()
-;;             );
-;;     send_raw_message(msg.end_cell(), 1); 
-;; }
-
-;; () deploy_user_contract(int last_time_drop, cell user_drop_code, int amount, slice owner) impure {
-;;     ;; Формируем state_init для нового контракта
-;;     cell state_init = calculate_user_drop_state_init(last_time_drop, user_drop_code);
-
-;;     ;; Рассчитываем адрес нового контракта
-;;     slice user_drop_address = calculate_user_drop_address(workchain(), state_init);
-
-;;     ;; Создаём сообщение для деплоя
-;;     var deploy_msg = begin_cell()
-;;             .store_uint(0x18, 6)  ;; Message info: deploy contract
-;;             .store_slice(user_drop_address)
-;;             .store_coins(amount)
-;;             .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
-;;             .store_ref(state_init)
-;;             .store_ref(
-;;                 begin_cell()
-;;                     .store_slice(owner)
-;;                 .end_cell()
-;;             );
-
-;;     ;; Отправляем сообщение для деплоя
-;;     send_raw_message(deploy_msg.end_cell(), 1);
-
-;;     ;; После деплоя отправляем сообщение с оп-кодом
-;;     var message_body = begin_cell()
-;;         .store_uint(op::send_ton, 32)  ;; Оп-код
-;;         .store_slice(owner)           ;; Адрес владельца
-;;         .end_cell();
-
-;;     var send_msg = begin_cell()
-;;         .store_uint(0x10, 6)           ;; Message info
-;;         .store_slice(user_drop_address) ;; Адрес получателя (новый контракт)
-;;         .store_coins(26660000)          ;; Сумма для отправки (например, 0.001 TON)
-;;         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-;;         .store_ref(message_body)
-;;         .end_cell();
-
-;;     ;; Отправляем сообщение с оп-кодом
-;;     send_raw_message(send_msg, 1);
-;; }
-
 () deploy_user_contract(int last_time_drop, cell user_drop_code, int amount, slice owner) impure {
     cell state_init = calculate_user_drop_state_init(last_time_drop, user_drop_code);
     slice user_drop_address = calculate_user_drop_address(workchain(), state_init);
