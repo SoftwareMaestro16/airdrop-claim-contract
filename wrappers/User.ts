@@ -8,7 +8,7 @@ export type UserConfig = {
 
 export function userConfigToCell(config: UserConfig): Cell {
     return beginCell()
-        .storeUint(config.lastTimeDrop, 32)
+        .storeUint(config.lastTimeDrop, 128)
         .storeAddress(config.mainDropAddress)
         .storeAddress(config.owner)
     .endCell();
@@ -31,7 +31,18 @@ export class User implements Contract {
         await provider.internal(via, {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: beginCell().endCell(),
+            body: beginCell()
+                .storeUint(0x48c671b0, 32)
+            .endCell(),
         });
+    }
+
+    async sendTon(provider: ContractProvider, via: Sender, value: bigint) {
+        await provider.internal(via, {
+            value, sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(0x48c671b0, 32)
+            .endCell()
+        })
     }
 }

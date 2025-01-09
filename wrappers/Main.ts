@@ -10,7 +10,7 @@ export function mainConfigToCell(config: MainConfig): Cell {
     return beginCell()
         .storeAddress(config.owner)
         .storeRef(config.userDropCode)
-        .storeUint(config.isLocked, 1)
+        .storeUint(config.isLocked, 16)
     .endCell();
 }
 

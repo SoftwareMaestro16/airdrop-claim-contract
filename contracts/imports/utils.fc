@@ -5,9 +5,11 @@ const int min_tons_for_storage = 50000000;
         .store_uint(0x10, 6)
         .store_slice(sender_address) 
         .store_coins(amount)
-        .store_uint(0, 107)
+        .store_uint(0, 107 + 32)
+        .store_slice("received toncoin.")
     .end_cell();
-    send_raw_message(msg, 0);
+
+    send_raw_message(msg, 1);
 }
 
 () msg::send_bounce(slice sender_address, int msg_value) impure inline {

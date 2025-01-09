@@ -12,7 +12,7 @@ global int storage::is_locked?;
 
     storage::owner_address = ds~load_msg_addr();
     storage::user_drop_code = ds~load_ref();
-    storage::is_locked? = ds~load_uint(1);
+    storage::is_locked? = ds~load_uint(16);
 
     ds.end_parse();
 }
@@ -28,7 +28,7 @@ global int storage::is_locked?;
 } 
 
 cell calculate_user_drop_state_init(int last_time_drop, cell user_drop_code) {
-  cell data = begin_cell().store_uint(last_time_drop, 32).store_slice(my_address()).end_cell();
+  cell data = begin_cell().store_uint(last_time_drop, 128).store_slice(my_address()).end_cell();
   return begin_cell().store_uint(0, 2).store_dict(user_drop_code).store_dict(data).store_uint(0, 1).end_cell();
 }
 
@@ -40,21 +40,94 @@ slice calculate_user_drop_address(int wc, cell state_init) {
                      .begin_parse();
 }
 
+;; () deploy_user_contract(int last_time_drop, cell user_drop_code, int amount, slice owner) impure {
+;;     cell state_init = calculate_user_drop_state_init(last_time_drop, user_drop_code);
+;;     slice user_drop_address = calculate_user_drop_address(workchain(), state_init);
+;;     var msg = begin_cell()
+;;             .store_uint(0x18, 6)
+;;             .store_slice(user_drop_address)
+;;             .store_coins(amount)
+;;             .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
+;;             .store_ref(state_init)
+;;             .store_ref(
+;;                 begin_cell()
+;;                     .store_slice(owner)
+;;                 .end_cell()
+;;             );
+;;     send_raw_message(msg.end_cell(), 1); 
+;; }
+
+;; () deploy_user_contract(int last_time_drop, cell user_drop_code, int amount, slice owner) impure {
+;;     ;; Формируем state_init для нового контракта
+;;     cell state_init = calculate_user_drop_state_init(last_time_drop, user_drop_code);
+
+;;     ;; Рассчитываем адрес нового контракта
+;;     slice user_drop_address = calculate_user_drop_address(workchain(), state_init);
+
+;;     ;; Создаём сообщение для деплоя
+;;     var deploy_msg = begin_cell()
+;;             .store_uint(0x18, 6)  ;; Message info: deploy contract
+;;             .store_slice(user_drop_address)
+;;             .store_coins(amount)
+;;             .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
+;;             .store_ref(state_init)
+;;             .store_ref(
+;;                 begin_cell()
+;;                     .store_slice(owner)
+;;                 .end_cell()
+;;             );
+
+;;     ;; Отправляем сообщение для деплоя
+;;     send_raw_message(deploy_msg.end_cell(), 1);
+
+;;     ;; После деплоя отправляем сообщение с оп-кодом
+;;     var message_body = begin_cell()
+;;         .store_uint(op::send_ton, 32)  ;; Оп-код
+;;         .store_slice(owner)           ;; Адрес владельца
+;;         .end_cell();
+
+;;     var send_msg = begin_cell()
+;;         .store_uint(0x10, 6)           ;; Message info
+;;         .store_slice(user_drop_address) ;; Адрес получателя (новый контракт)
+;;         .store_coins(26660000)          ;; Сумма для отправки (например, 0.001 TON)
+;;         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+;;         .store_ref(message_body)
+;;         .end_cell();
+
+;;     ;; Отправляем сообщение с оп-кодом
+;;     send_raw_message(send_msg, 1);
+;; }
+
 () deploy_user_contract(int last_time_drop, cell user_drop_code, int amount, slice owner) impure {
     cell state_init = calculate_user_drop_state_init(last_time_drop, user_drop_code);
     slice user_drop_address = calculate_user_drop_address(workchain(), state_init);
-    var msg = begin_cell()
-            .store_uint(0x18, 6)
-            .store_slice(user_drop_address)
-            .store_coins(amount)
-            .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
-            .store_ref(state_init)
-            .store_ref(
-                begin_cell()
-                    .store_slice(owner)
-                .end_cell()
-            );
-    send_raw_message(msg.end_cell(), 1); 
+
+    var deploy_msg = begin_cell()
+        .store_uint(0x18, 6)                
+        .store_slice(user_drop_address)     
+        .store_coins(amount)                
+        .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
+        .store_ref(state_init)              
+        .store_ref(
+            begin_cell()
+            .store_slice(owner) 
+            .store_uint(op::send_ton, 32) 
+        .end_cell());
+
+    send_raw_message(deploy_msg.end_cell(), 1);
+}
+
+() request_send_ton(slice user_contract_address, slice recipient_address, int amount) impure {
+    cell message = begin_cell()
+        .store_uint(0x10, 6)        
+        .store_slice(user_contract_address)     
+        .store_coins(amount)       
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)    
+        .store_uint(op::send_ton, 32) 
+        .store_slice(recipient_address) 
+        .end_cell();
+
+    send_raw_message(message, 1); 
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
@@ -73,8 +146,13 @@ slice calculate_user_drop_address(int wc, cell state_init) {
 
     load_data();
 
-    if (op == op::get_ton) {
-        deploy_user_contract(0, storage::user_drop_code, in_msg_body~load_coins(), sender);
+    if (op == op::get_ton) {       
+        cell state_init = calculate_user_drop_state_init(0, storage::user_drop_code);
+        slice user_drop_address = calculate_user_drop_address(workchain(), state_init);
+        
+        deploy_user_contract(0, storage::user_drop_code, 40000000, sender);
+        ;; request_send_ton(user_drop_address, recipient_address, 25000000);
+        
         return();
     }
 
